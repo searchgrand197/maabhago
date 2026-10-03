@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>HMS – Hospital Management</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vardaan" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+    <script>
+      (function () {
+        const firstSegment = (window.location.pathname || '/')
+          .split('/')
+          .filter(Boolean)[0]
+
+        let roleKey = 'staff'
+        if (firstSegment === 'doctor') roleKey = 'doctor'
+        else if (firstSegment === 'pharmacy') roleKey = 'pharmacy'
+        else if (firstSegment === 'receptionist' || firstSegment === 'reception') roleKey = 'receptionist'
+        else if (firstSegment === 'staff') roleKey = 'staff'
+        else {
+          const savedRole = window.localStorage.getItem('role')
+          if (savedRole === 'doctor') roleKey = 'doctor'
+          else if (savedRole === 'pharmacy') roleKey = 'pharmacy'
+          else if (savedRole === 'receptionist' || savedRole === 'reception') roleKey = 'receptionist'
+        }
+
+        const roleMeta = {
+          doctor: {
+            iconHref: '/icons/icon-doctor-192.png?v=4',
+            manifestHref: '/manifest-doctor.json?v=4',
+          },
+          pharmacy: {
+            iconHref: '/icons/icon-pharmacy-192.png?v=4',
+            manifestHref: '/manifest-pharmacy.json?v=4',
+          },
+          receptionist: {
+            iconHref: '/icons/icon-reception-192.png?v=5',
+            manifestHref: '/manifest-receptionist.json?v=5',
+          },
+          staff: {
+            iconHref: '/icons/icon-staff-192.png?v=4',
+            manifestHref: '/manifest-staff.json?v=4',
+          },
+        }[roleKey]
+
+        const appendLink = (rel, href, type) => {
+          const link = document.createElement('link')
+          link.setAttribute('rel', rel)
+          link.setAttribute('href', href)
+          if (type) link.setAttribute('type', type)
+          document.head.appendChild(link)
+        }
+
+        document
+          .querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]')
+          .forEach((node) => node.parentNode && node.parentNode.removeChild(node))
+
+        appendLink('icon', roleMeta.iconHref, 'image/png')
+        appendLink('shortcut icon', roleMeta.iconHref, 'image/png')
+        appendLink('apple-touch-icon', roleMeta.iconHref)
+
+        let manifestLink = document.querySelector('link[rel="manifest"]')
+        if (!manifestLink) {
+          manifestLink = document.createElement('link')
+          manifestLink.setAttribute('rel', 'manifest')
+          document.head.appendChild(manifestLink)
+        }
+        manifestLink.setAttribute('href', roleMeta.manifestHref)
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

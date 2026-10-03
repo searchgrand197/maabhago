@@ -1,0 +1,12 @@
+Django==5.0.7
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+drf-spectacular==0.27.2
+django-filter==24.2
+django-environ==0.11.2
+django-cors-headers==4.6.0
+psycopg2-binary==2.9.10
+whitenoise==6.6.0
+pillow==10.4.0
+gunicorn==25.1.0
+pywebpush

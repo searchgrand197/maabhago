@@ -1,0 +1,46 @@
+/* TEMPORARY: Tailwind is kept until all portals are migrated to MUI.
+   Once every portal uses MUI sx/Grid, remove this import and the tailwindcss dependency. */
+@import "tailwindcss";
+
+/* Global resets — MUI handles component styling via theme. */
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for dense views */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+
+/* Doctor portal security scope */
+.doctor-portal-security-scope .doctor-no-copy {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+.doctor-portal-security-scope .doctor-no-copy input,
+.doctor-portal-security-scope .doctor-no-copy textarea,
+.doctor-portal-security-scope .doctor-no-copy select,
+.doctor-portal-security-scope .doctor-no-copy [contenteditable="true"],
+.doctor-portal-security-scope .doctor-no-copy [contenteditable=""],
+.doctor-portal-security-scope .doctor-no-copy [role="textbox"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+}

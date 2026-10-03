@@ -1,0 +1,212 @@
+complete, real‑world Django auto‑deployment example using Bitbucket → Webhook → Hostinger VPS.
+This is production‑safe, commonly used, and works well on VPS.
+--------------------------------------------------------------------
+✅ Django Auto‑Deploy from Bitbucket using Webhook (Example)
+--------------------------------------------------------------------
+Goal:
+When you push to main, your Django app updates automatically on the VPS.
+
+git push → Bitbucket (main)
+           ↓
+        Webhook
+           ↓
+        VPS
+           ↓
+  Django app updated & restarted
+-------------------------------------------------------------
+✅ High‑Level Picture (Very Important)
+Developer machine
+   |
+   |  git push origin main
+   |
+Bitbucket (Git repo)
+   |
+   |  Webhook (HTTP request)
+   |
+Your VPS server
+   |
+   |  deploy.sh runs
+   |
+Django app updated + restarted
+---------------------------------------------------
+✅ 1.Django Project Structure
+
+/var/www/mydjango
+├── myproject/
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── manage.py
+├── requirements.txt
+├── venv/
+├── deploy.sh (our script)
+└── webhook.py (to hit our api from bitbucket api)
+------------------------------------------------------
+✅ 2. Deployment Script (deploy.sh)
+This script:
+
+Pulls main
+Installs dependencies
+Runs migrations
+Collects static files
+Restarts Gunicorn
+-------------------------------------------------------
+#!/bin/bash
+
+APP_DIR="/var/www/mydjango"
+VENV="$APP_DIR/venv"
+BRANCH="main"
+LOG="/var/log/django-deploy.log"
+
+echo "---- DEPLOY START $(date) ----" >> $LOG
+
+cd $APP_DIR || exit 1
+
+echo "Fetching code..." >> $LOG
+git fetch origin >> $LOG 2>&1
+git reset --hard origin/$BRANCH >> $LOG 2>&1
+
+echo "Activating virtualenv..." >> $LOG
+source $VENV/bin/activate
+
+echo "Installing dependencies..." >> $LOG
+pip install -r requirements.txt >> $LOG 2>&1
+
+echo "Running migrations..." >> $LOG
+python manage.py migrate >> $LOG 2>&1
+
+echo "Collecting static files..." >> $LOG
+python manage.py collectstatic --noinput >> $LOG 2>&1
+
+echo "Restarting Gunicorn..." >> $LOG
+systemctl restart gunicorn
+
+echo "Deploy finished ✅" >> $LOG
+echo "-----------------------------" >> $LOG
+------------------------------------------------------------
+✅ 3. Webhook Listener (Python – Django Safe)
+Instead of PHP, here’s a pure Python webhook (recommended for Django apps).
+Create webhook file:
+nano /var/www/mydjango/webhook.py
+code:
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import subprocess
+import urllib.parse
+
+SECRET = "SUPER_SECRET_TOKEN"
+
+class WebhookHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+
+        if query.get("token", [""])[0] != SECRET:
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"Forbidden")
+            return
+
+        subprocess.run(["/var/www/mydjango/deploy.sh"])
+
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Deployment triggered")
+
+if __name__ == "__main__":
+    server = HTTPServer(("127.0.0.1", 9000), WebhookHandler)
+    server.serve_forever()
+-------------------------------------------------------------
+✅ 4. Run Webhook Service as Systemd
+nano /etc/systemd/system/django-webhook.service
+
+[Unit]
+Description=Django Git Webhook
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /var/www/mydjango/webhook.py
+WorkingDirectory=/var/www/mydjango
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+
+Enable & start:
+systemctl daemon-reexec
+systemctl enable django-webhook
+systemctl start django-webhook
+-----------------------------------------------------
+✅ 5. Nginx Proxy for Webhook (Secure)
+Add to your Nginx server block:
+location /webhook {
+    proxy_pass http://127.0.0.1:9000;
+    allow <BITBUCKET_IP_RANGE>;
+    deny all;
+}----------------------------------------------------
+✅ 6. Create Bitbucket Webhook
+Bitbucket → Repository Settings → Webhooks
+
+URL
+
+https://yourdomain.com/webhook?token=SUPER_SECRET_TOKEN
+
+
+✅ Trigger: Repository push
+
+Save ✅
+------------------------------------------------------
+
+✅ 7. Test Deployment
+Manual test:
+Shellcurl https://yourdomain.com/webhook?token=SUPER_SECRET_TOKENShow more lines
+Push to main:
+Shellgit push origin mainShow more lines
+Watch logs:
+Shelltail -f /var/log/django-deploy.logShow more lines
+✅ Your Django app deploys automatically 🎉
+-------------------------------------------------------
+✅ Best Practices (Very Important)
+✅ DO
+
+Deploy only from main
+Use .env for secrets
+Use reset --hard in prod
+Use Gunicorn restart
+Lock webhook with token + IP
+
+❌ DON’T
+
+Push code from VPS
+Commit .env
+Deploy feature branches
+Use git pull blindly
+------------------------------------------------------
+✅ Recommended Django Flow
+feature/* → PR → main → auto deploy → production
+------------------------------------------------------
+✅ Summary
+✔ Fully automated Django deployment
+✔ Secure webhook
+✔ Production‑ready
+✔ Easy rollback
+✔ Works perfectly on Hostinger VPS
+------------------------------------------------------
+
+Results
+git push origin main
+     ↓
+Bitbucket webhook fires
+     ↓
+Nginx receives request
+     ↓
+Nginx proxies to localhost:9000
+     ↓
+Python webhook validates token
+     ↓
+deploy.sh runs
+     ↓
+Gunicorn restarts
+     ↓
+New Django code is live

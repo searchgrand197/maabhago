@@ -1,0 +1,26 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:5173",
+      "localStorage": [
+        {
+          "name": "access",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MTcyNjM2LCJpYXQiOjE3NzYxNzA4MzYsImp0aSI6Ijc0ZDJkYjBlZTJjYjRhZTVhYzcxMzZhOTZlYjgyMmIxIiwidXNlcl9pZCI6IjQ4ODhlODY0LTQwNTgtNGIxYi1hNzZiLTg4MmRhYjllYTZlMCIsImhvc3BpdGFsX2lkIjoiYTA3ODEyN2QtYmI4Zi00OWE0LTg3ODYtZGUxOTBkNTEwNjg0In0.FzqFWJn1K3NVn-NZMKFk_siOjp2puSOmldqrC4DrVTA"
+        },
+        {
+          "name": "role",
+          "value": "pharmacy"
+        },
+        {
+          "name": "user",
+          "value": "{\"refresh\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3Njc3NTYzNiwiaWF0IjoxNzc2MTcwODM2LCJqdGkiOiJmNjUzYWNhZTg1YTE0NjVjOGVlNDRhZjIxZmU4NzVjMyIsInVzZXJfaWQiOiI0ODg4ZTg2NC00MDU4LTRiMWItYTc2Yi04ODJkYWI5ZWE2ZTAiLCJob3NwaXRhbF9pZCI6ImEwNzgxMjdkLWJiOGYtNDlhNC04Nzg2LWRlMTkwZDUxMDY4NCJ9.F_uP4KAwoGQBTMKcGzydox7pMlKmcuClwkMs4gA8-wQ\",\"access\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc2MTcyNjM2LCJpYXQiOjE3NzYxNzA4MzYsImp0aSI6Ijc0ZDJkYjBlZTJjYjRhZTVhYzcxMzZhOTZlYjgyMmIxIiwidXNlcl9pZCI6IjQ4ODhlODY0LTQwNTgtNGIxYi1hNzZiLTg4MmRhYjllYTZlMCIsImhvc3BpdGFsX2lkIjoiYTA3ODEyN2QtYmI4Zi00OWE0LTg3ODYtZGUxOTBkNTEwNjg0In0.FzqFWJn1K3NVn-NZMKFk_siOjp2puSOmldqrC4DrVTA\",\"is_active\":true,\"is_staff\":true,\"is_superuser\":true,\"hospital_id\":\"a078127d-bb8f-49a4-8786-de190d510684\",\"hospital_name\":\"Default Hospital\",\"email\":\"sachin@gmail.com\",\"first_name\":\"\",\"last_name\":\"\"}"
+        },
+        {
+          "name": "refresh",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3Njc3NTYzNiwiaWF0IjoxNzc2MTcwODM2LCJqdGkiOiJmNjUzYWNhZTg1YTE0NjVjOGVlNDRhZjIxZmU4NzVjMyIsInVzZXJfaWQiOiI0ODg4ZTg2NC00MDU4LTRiMWItYTc2Yi04ODJkYWI5ZWE2ZTAiLCJob3NwaXRhbF9pZCI6ImEwNzgxMjdkLWJiOGYtNDlhNC04Nzg2LWRlMTkwZDUxMDY4NCJ9.F_uP4KAwoGQBTMKcGzydox7pMlKmcuClwkMs4gA8-wQ"
+        }
+      ]
+    }
+  ]
+}

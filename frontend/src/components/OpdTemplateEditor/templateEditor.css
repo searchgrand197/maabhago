@@ -1,0 +1,939 @@
+/* Scoped look matching intvice template editor (light app chrome) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap');
+
+/* Full-bleed A4 for printing (no page margin). Actual borderless output also depends on printer + driver. */
+@page {
+  size: A4 portrait;
+  margin: 0;
+  marks: none;
+}
+
+.template-editor-app,
+.template-editor-app * {
+  box-sizing: border-box;
+}
+
+.template-editor-app {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f5f6fb;
+  color: #333;
+  min-height: 100%;
+  text-align: left;
+}
+
+.template-editor-app .field {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.template-editor-app .field-hint {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.template-editor-app label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.template-editor-app input[type='text'],
+.template-editor-app input[type='number'],
+.template-editor-app select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.template-editor-app input:focus,
+.template-editor-app select:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
+}
+
+.template-editor-app .primary-btn,
+.template-editor-app .secondary-btn {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.template-editor-app .primary-btn {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(22, 163, 74, 0.35);
+}
+
+.template-editor-app .primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(22, 163, 74, 0.5);
+}
+
+.template-editor-app .secondary-btn {
+  background: #111827;
+  color: #f9fafb;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.5);
+}
+
+.template-editor-app .secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.template-editor-app .secondary-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.template-editor-app .template-editor-sidebar .secondary-btn {
+  margin-top: 0;
+}
+
+.template-editor-page {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0 16px 24px;
+}
+
+.template-editor-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.09);
+  padding: 24px;
+}
+
+.template-editor-card h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.template-editor-subtitle {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.template-editor-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.template-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Editor mode: canvas sticks while sidebar scrolls independently */
+.editor-layout-sticky .template-editor-preview-scroll {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  /* Keep the sheet flush to the column’s left edge (no horizontal centering gap). */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.editor-layout-sticky .template-editor-sidebar {
+  max-height: calc(100vh - -250px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.editor-layout-sticky .template-editor-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.editor-layout-sticky .template-editor-sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.template-editor-preview-scroll {
+  overflow: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.template-editor-canvas-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  width: 600px;
+  max-width: 100%;
+  /* A4 portrait aspect ratio */
+  aspect-ratio: 210 / 297;
+  height: auto;
+  flex-shrink: 0;
+  margin-inline: 0;
+}
+
+.template-editor-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.template-editor-canvas img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+}
+
+.field-box {
+  position: absolute;
+  padding: 4px 6px;
+  cursor: grab;
+  user-select: none;
+  box-shadow: none;
+  color: #000;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-shadow: none;
+  background: transparent;
+}
+
+.field-box:active {
+  cursor: grabbing;
+}
+
+/* Slip column alignment: fixed label width + value column (checkbox "Align slip columns"). */
+.field-box--slip-row,
+.dynamic-field--slip-columns {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-start;
+  /* Clear space after "Name:" before the value column */
+  gap: 0.55em;
+  max-width: 100%;
+}
+
+.field-box-slip-label {
+  font-weight: inherit;
+  flex: 0 0 var(--opd-slip-label-ch, max-content);
+  width: var(--opd-slip-label-ch, max-content);
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+  box-sizing: border-box;
+  /* Extra air after the colon (before the value column) */
+  padding-inline-end: 0.4ch;
+}
+
+.field-box-value-text,
+.field-box-value-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.field-box-value-text {
+  font-style: normal;
+  font-weight: inherit;
+  opacity: 1;
+}
+
+.field-box-preview-part {
+  opacity: 0.42;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.dynamic-field--slip-columns .field-box-preview-part {
+  color: #64748b;
+}
+
+/* —— VARDAAN-style sheet chrome (editor + generator preview) —— */
+.template-editor-canvas.opd-sheet {
+  position: relative;
+  background: #fff;
+}
+
+.opd-sheet--with-bg .opd-sheet-chrome {
+  display: none !important;
+}
+
+.template-editor-canvas.opd-sheet > img:not([src]) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.template-editor-canvas.opd-sheet > img {
+  z-index: 1;
+}
+
+.template-editor-canvas.opd-sheet .field-box {
+  z-index: 2;
+  /* Flush to canvas edges when x/y = 0 (no extra inset from padding). */
+  padding: 0;
+  margin: 0;
+  position: absolute;
+}
+
+/* Editor canvas: field/note boxes hug their text (no fixed empty width to the right). */
+.template-editor-canvas.opd-sheet .field-box.dynamic-field {
+  white-space: nowrap;
+}
+.template-editor-canvas.opd-sheet .field-box.dynamic-note {
+  white-space: pre-wrap;
+}
+
+.opd-generator-wrap {
+  background: #e8edf2;
+  container-type: inline-size;
+}
+
+.opd-sheet-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111;
+  overflow: hidden;
+  font-size: 7px;
+}
+
+@media (min-width: 480px) {
+  .opd-sheet-chrome {
+    font-size: 8px;
+  }
+}
+
+.opd-header {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #0f766e 0%, #0d5c55 100%);
+  color: #fff;
+  padding: 0.9em 1em 0.75em;
+}
+
+.opd-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+}
+
+.opd-logo-wrap {
+  flex-shrink: 0;
+}
+
+.opd-logo-icon {
+  width: 2.8em;
+  height: 2.8em;
+  display: block;
+  border-radius: 0.35em;
+}
+
+.opd-hospital-name {
+  font-weight: 800;
+  font-size: 1.6em;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.opd-hospital-meta {
+  margin-top: 0.35em;
+  font-size: 1em;
+  opacity: 0.95;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.opd-patient-section {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em 1.25em;
+  padding: 0.65em 1em;
+  background: #fff;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.opd-field-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  min-height: 1.5em;
+}
+
+.opd-lbl {
+  font-weight: 700;
+  font-size: 1.05em;
+  white-space: nowrap;
+  color: #111827;
+}
+
+.opd-dots {
+  flex: 1;
+  border-bottom: 1px dotted #6b7280;
+  min-height: 0.85em;
+}
+
+.opd-mid-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5em 0.65em 0.35em;
+  background: #fff;
+}
+
+.opd-mid-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 0.35em;
+  min-height: 8em;
+}
+
+.opd-mid-cell {
+  border: 1px solid #374151;
+  padding: 0.35em 0.4em;
+  background: #fafafa;
+}
+
+.opd-mid-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.opd-mid-list {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 0.95em;
+  line-height: 1.35;
+  color: #374151;
+}
+
+.opd-mid-placeholder {
+  margin: 0.25em 0 0;
+  font-size: 0.9em;
+  line-height: 1.3;
+  color: #4b5563;
+}
+
+.opd-pain-scale {
+  margin-top: 0.5em;
+  font-size: 0.85em;
+}
+
+.opd-pain-bar {
+  height: 0.4em;
+  margin-top: 0.25em;
+  background: linear-gradient(90deg, #22c55e 0%, #eab308 40%, #eab308 60%, #dc2626 100%);
+  border-radius: 2px;
+  border: 1px solid #9ca3af;
+}
+
+.opd-mid-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35em;
+  margin-top: 0.35em;
+}
+
+.opd-mid-wide {
+  border: 1px solid #374151;
+  min-height: 2.5em;
+  padding: 0.3em 0.4em;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #111827;
+  background: #f9fafb;
+}
+
+.opd-watermark {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  font-size: clamp(14px, 4.5cqw, 28px);
+  font-weight: 900;
+  color: rgba(15, 118, 110, 0.08);
+  white-space: nowrap;
+  z-index: 0;
+  pointer-events: none;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.opd-sheet-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.opd-disclaimer {
+  margin: 0;
+  padding: 0.35em 0.65em 0.25em;
+  font-size: 0.85em;
+  line-height: 1.35;
+  color: #374151;
+  background: #fff;
+}
+
+.opd-bar-grey {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.35em 0.65em;
+  background: #d1d5db;
+  font-size: 0.95em;
+  color: #111827;
+}
+
+.opd-bar-hindi {
+  flex: 1;
+  line-height: 1.3;
+}
+
+.opd-bar-mlc {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.opd-bar-teal {
+  height: 0.55em;
+  background: #0f766e;
+}
+
+.opd-empty-hint {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  max-width: 85%;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #374151;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.opd-btn-print-bg {
+  background: #0f766e !important;
+  color: #fff !important;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.35) !important;
+}
+
+.opd-btn-print-bg:hover {
+  background: #0d5c55 !important;
+}
+
+/* Old, template-specific field styles are intentionally removed.
+   All dynamic fields use plain .field-box styling above. */
+
+.template-editor-sidebar h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.editor-values {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.generator-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.generator-field-grid .field {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .generator-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .template-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+.value-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #4b5563;
+  padding: 4px 0;
+}
+
+.value-row.disabled {
+  opacity: 0.5;
+}
+
+.value-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.value-row-controls input {
+  width: 64px;
+}
+
+.size-toggle {
+  border: none;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.value-row.disabled .size-toggle {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+/* ── Value row: stacked variant (field/note rows with style controls) ── */
+.value-row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* ── Style controls (B / I / color / align) ── */
+.style-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.style-btn {
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.style-btn.active {
+  background: #111827;
+  color: #f9fafb;
+  border-color: #111827;
+}
+
+.style-btn:hover:not(.active) {
+  background: #e5e7eb;
+}
+
+.style-color {
+  width: 28px;
+  height: 22px;
+  padding: 1px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+/* ── Shape style select (border/line style) ── */
+.shape-style-select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+  height: 24px;
+}
+
+/* ── Dynamic shape elements on canvas ── */
+.dynamic-shape {
+  position: absolute;
+  cursor: grab;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.dynamic-shape:active {
+  cursor: grabbing;
+}
+
+/* Resize handle — bottom-right corner for rects, end for lines */
+.shape-resize-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: se-resize;
+  z-index: 3;
+  flex-shrink: 0;
+  pointer-events: all;
+}
+
+/* ── Dynamic table elements on canvas ── */
+.dynamic-table {
+  position: absolute;
+  cursor: grab;
+  z-index: 1;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.dynamic-table:active {
+  cursor: grabbing;
+}
+
+.dynamic-table-inner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.dynamic-table table {
+  border-collapse: collapse;
+  width: 100%;
+  height: 100%;
+  table-layout: fixed;
+  pointer-events: none;
+}
+
+.dynamic-table td {
+  border: 1px solid #374151;
+  padding: 1px 3px;
+  font-size: 9px;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── Prescription box on canvas ── */
+.dynamic-rx-box {
+  position: absolute;
+  cursor: grab;
+  z-index: 2;
+  overflow: visible;
+  box-sizing: border-box;
+  border: 2px dashed #d97706;
+  background: rgba(251, 191, 36, 0.08);
+  border-radius: 4px;
+}
+
+.dynamic-rx-box:active {
+  cursor: grabbing;
+}
+
+.dynamic-rx-box-inner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  pointer-events: none;
+  color: #92400e;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.dynamic-rx-box-title {
+  font-weight: 800;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.dynamic-rx-box-preview {
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.dynamic-rx-box-sample {
+  font-style: italic;
+  opacity: 0.7;
+  font-size: 9px;
+}
+
+.editor-colors .color-row input[type='color'] {
+  width: 36px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.layout-json {
+  width: 100%;
+  min-height: 170px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.template-editor-sidebar .field-hint {
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .template-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* Hidden on screen — only the @media print block makes it visible */
+#opd-print-portal {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+    marks: none;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Hide EVERYTHING (including #root / the whole SPA) */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show ONLY our print portal */
+  body > #opd-print-portal {
+    display: block !important;
+  }
+
+  /* The A4 page container inside the portal */
+  .opd-print-page {
+    display: block !important;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: #fff;
+    position: relative;
+    /* container-type so cqw units resolve against 210mm */
+    container-type: inline-size;
+  }
+
+  /* Sheet canvas */
+  .opd-print-page .template-editor-canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block !important;
+  }
+
+  /* Background image */
+  .opd-print-page .template-editor-canvas img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    z-index: 1;
+    display: block !important;
+  }
+
+  /* Field / note boxes */
+  .opd-print-page .field-box {
+    position: absolute;
+    z-index: 2;
+    color: #000;
+    background: transparent;
+    display: block !important;
+    padding: 4px 6px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* Vardaan chrome (full OPD sheet layout) */
+  .opd-print-page .opd-sheet-chrome {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex !important;
+    flex-direction: column;
+    pointer-events: none;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    overflow: hidden;
+    font-size: 8px;
+  }
+
+  /* When printing with an uploaded background image, the chrome is already
+     hidden by .opd-sheet--with-bg rule — no extra rule needed. */
+}

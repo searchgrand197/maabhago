@@ -1,0 +1,1328 @@
+{
+  "info": {
+    "_postman_id": "d9f6f4c2-0000-4000-8000-hms-local",
+    "name": "HMS API v1 (Local, Complete)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Obtain token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "name": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"your_password_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tokens/",
+              "host": ["{{baseUrl}}"],
+              "path": ["tokens", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", ""]
+            }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CARD\",\n  \"name\": \"Cardiology\",\n  \"description\": \"Cardiology department\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", ""]
+            }
+          }
+        },
+        {
+          "name": "Retrieve",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", "{{departmentId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CARD\",\n  \"name\": \"Cardiology Updated\",\n  \"description\": \"Updated description\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", "{{departmentId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete (blocked if linked)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", "{{departmentId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Designations",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", ""]
+            }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NURSE\",\n  \"name\": \"Staff Nurse\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/designations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", ""]
+            }
+          }
+        },
+        {
+          "name": "Retrieve",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designationId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NURSE\",\n  \"name\": \"Senior Staff Nurse\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designationId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete (blocked if staff attached)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designationId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shifts",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shifts/",
+              "host": ["{{baseUrl}}"],
+              "path": ["shifts", ""]
+            }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Morning\",\n  \"start_time\": \"09:00:00\",\n  \"end_time\": \"17:00:00\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shifts/",
+              "host": ["{{baseUrl}}"],
+              "path": ["shifts", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", ""]
+            }
+          }
+        },
+        {
+          "name": "Create (auto user + email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": null,\n  \"department\": \"{{departmentId1}}\",\n  \"designation\": \"{{designationId}}\",\n  \"employee_code\": \"\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Staff\",\n  \"phone\": \"9999999999\",\n  \"address\": \"\",\n  \"joining_date\": \"2026-03-30\",\n  \"employment_status\": \"active\",\n  \"email\": \"staff@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff/",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Emergency contacts",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/emergency-contacts/",
+              "host": ["{{baseUrl}}"],
+              "path": ["emergency-contacts", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Specialties",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/",
+              "host": ["{{baseUrl}}"],
+              "path": ["specialties", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctor profiles (multi-department)",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doctor-profiles/",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctor-profiles", ""]
+            }
+          }
+        },
+        {
+          "name": "Create (multiple departments)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": null,\n  \"departments\": [\"{{departmentId1}}\", \"{{departmentId2}}\"],\n  \"specialty\": \"{{specialtyId}}\",\n  \"doctor_type\": \"consultant\",\n  \"doctor_code\": \"DOC-0001\",\n  \"name\": \"Dr Test\",\n  \"mobile_number\": \"9999999999\",\n  \"alternate_mobile_number\": \"\",\n  \"address\": \"\",\n  \"consultation_fee\": \"500.00\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/doctor-profiles/",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctor-profiles", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctor weekly schedules",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/weekly-schedules/",
+              "host": ["{{baseUrl}}"],
+              "path": ["weekly-schedules", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctor daily availability",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/daily-availability/",
+              "host": ["{{baseUrl}}"],
+              "path": ["daily-availability", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OPD visits",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/opd-visits/",
+              "host": ["{{baseUrl}}"],
+              "path": ["opd-visits", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "IPD admissions",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ipd-admissions/",
+              "host": ["{{baseUrl}}"],
+              "path": ["ipd-admissions", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Follow-ups",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/follow-ups/",
+              "host": ["{{baseUrl}}"],
+              "path": ["follow-ups", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoices", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory - Medicines",
+      "item": [
+        {
+          "name": "List medicines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/",
+              "host": ["{{baseUrl}}"],
+              "path": ["medicines", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory - Batches",
+      "item": [
+        {
+          "name": "List batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory - Stock ledgers",
+      "item": [
+        {
+          "name": "List stock ledgers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-ledgers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock-ledgers", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory - Units",
+      "item": [
+        {
+          "name": "List units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/units/",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User permission profiles",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user-permission-profiles/",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-permission-profiles", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Daily records",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/daily-records/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "daily-records", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Regularizations",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/regularizations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "regularizations", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Leaves",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/leaves/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "leaves", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Earned leave allocations",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/earned-leave-allocations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "earned-leave-allocations", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Leave balances",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/leave-balances/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "leave-balances", ""]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api/v1"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "departmentId1",
+      "value": ""
+    },
+    {
+      "key": "departmentId2",
+      "value": ""
+    },
+    {
+      "key": "designationId",
+      "value": ""
+    },
+    {
+      "key": "specialtyId",
+      "value": ""
+    },
+    {
+      "key": "doctorId",
+      "value": ""
+    },
+    {
+      "key": "staffId",
+      "value": ""
+    }
+  ]
+}
+{
+  "info": {
+    "_postman_id": "d9f6f4c2-0000-4000-8000-hms-local",
+    "name": "HMS API v1 (Local)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Obtain token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "name": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"your_password_here\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/tokens/",
+          "host": ["{{baseUrl}}"],
+          "path": ["tokens", ""]
+        }
+      }
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "List departments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", ""]
+            }
+          }
+        },
+        {
+          "name": "Create department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CARD\",\n  \"name\": \"Cardiology\",\n  \"description\": \"Cardiology department\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete department (shows link errors)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["departments", "{{departmentId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Designations",
+      "item": [
+        {
+          "name": "List designations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", ""]
+            }
+          }
+        },
+        {
+          "name": "Create designation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NURSE\",\n  \"name\": \"Staff Nurse\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/designations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete designation (blocked if staff attached)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/designations/{{designationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["designations", "{{designationId}}", ""]
+            }
+          },
+          "response": [
+            {
+              "name": "Example 409 when staff linked",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/designations/{{designationId}}/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["designations", "{{designationId}}", ""]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": false,\n  \"errors\": {\n    \"detail\": \"Cannot delete this designation while it is linked to staff profiles. Reassign or remove those staff records first.\",\n    \"linked_staff\": [\n      {\n        \"id\": \"uuid-here\",\n        \"name\": \"EMP-0001\",\n        \"employee_code\": \"EMP-0001\"\n      }\n    ],\n    \"linked_counts\": {\"staff\": 1},\n    \"truncated\": {\"staff\": false}\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Doctor profiles (with multiple departments)",
+      "item": [
+        {
+          "name": "List doctors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doctor-profiles/",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctor-profiles", ""]
+            }
+          }
+        },
+        {
+          "name": "Create doctor (multiple departments)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": null,\n  \"departments\": [\"{{departmentId1}}\", \"{{departmentId2}}\"],\n  \"specialty\": \"{{specialtyId}}\",\n  \"doctor_type\": \"consultant\",\n  \"doctor_code\": \"DOC-0001\",\n  \"name\": \"Dr Test\",\n  \"mobile_number\": \"9999999999\",\n  \"alternate_mobile_number\": \"\",\n  \"address\": \"\",\n  \"consultation_fee\": \"500.00\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/doctor-profiles/",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctor-profiles", ""]
+            }
+          }
+        },
+        {
+          "name": "Retrieve doctor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doctor-profiles/{{doctorId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["doctor-profiles", "{{doctorId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "List staff",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", ""]
+            }
+          }
+        },
+        {
+          "name": "Create staff (auto user + email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": null,\n  \"department\": \"{{departmentId1}}\",\n  \"designation\": \"{{designationId}}\",\n  \"employee_code\": \"\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Staff\",\n  \"phone\": \"9999999999\",\n  \"address\": \"\",\n  \"joining_date\": \"2026-03-30\",\n  \"employment_status\": \"active\",\n  \"email\": \"staff@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff/",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance - Daily records",
+      "item": [
+        {
+          "name": "List daily attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/daily-records/?attendance_date=2026-03-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "daily-records", ""],
+              "query": [
+                {
+                  "key": "attendance_date",
+                  "value": "2026-03-30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create / update daily attendance record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staff\": \"{{staffId}}\",\n  \"attendance_date\": \"2026-03-31\",\n  \"check_in_at\": null,\n  \"check_out_at\": null,\n  \"status\": \"incomplete\",\n  \"notes\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/daily-records/",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "daily-records", ""]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api/v1"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "departmentId",
+      "value": ""
+    },
+    {
+      "key": "departmentId1",
+      "value": ""
+    },
+    {
+      "key": "departmentId2",
+      "value": ""
+    },
+    {
+      "key": "designationId",
+      "value": ""
+    },
+    {
+      "key": "specialtyId",
+      "value": ""
+    },
+    {
+      "key": "doctorId",
+      "value": ""
+    },
+    {
+      "key": "staffId",
+      "value": ""
+    }
+  ]
+}

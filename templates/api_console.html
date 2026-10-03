@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ hospital_name|default:"HMS" }} — API Console</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" crossorigin="anonymous" />
+  <style>
+    :root {
+      --bg: {{ theme.bg|default:"#0f1419" }};
+      --panel: {{ theme.panel|default:"#1a2332" }};
+      --panel-border: {{ theme.panel_border|default:"#2d3a4d" }};
+      --accent: {{ theme.accent|default:"#3b82f6" }};
+      --accent-dim: {{ theme.accent_dim|default:"#2563eb" }};
+      --text: {{ theme.text|default:"#e8eef7" }};
+      --muted: {{ theme.muted|default:"#94a3b8" }};
+      --success: {{ theme.success|default:"#22c55e" }};
+      --radius: {{ theme.radius|default:"10px" }};
+      --font: {{ theme.font|default:"Segoe UI, system-ui, -apple-system, sans-serif"|safe }};
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+    }
+    .layout {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+    header.hms-header {
+      background: linear-gradient(135deg, var(--panel) 0%, #152238 100%);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, var(--accent), var(--accent-dim));
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: -0.02em;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+    .brand p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .header-actions a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255,255,255,0.04);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .header-actions a:hover {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--accent);
+    }
+    .header-actions a.primary {
+      background: var(--accent);
+      border-color: var(--accent-dim);
+      font-weight: 600;
+    }
+    .header-actions a.primary:hover {
+      filter: brightness(1.08);
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1fr;
+      min-height: 0;
+    }
+    @media (max-width: 960px) {
+      .main-grid { grid-template-columns: 1fr; }
+      aside.sidebar { border-right: none; border-bottom: 1px solid var(--panel-border); }
+    }
+    aside.sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--panel-border);
+      padding: 1rem 1.1rem;
+      overflow-y: auto;
+    }
+    aside h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    aside ol {
+      margin: 0 0 1rem;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    aside ol strong { color: var(--text); }
+    .panel {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .panel label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .panel input {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.88rem;
+      margin-bottom: 0.5rem;
+    }
+    .panel button {
+      width: 100%;
+      padding: 0.55rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    .panel button:hover { filter: brightness(1.05); }
+    .panel button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg {
+      font-size: 0.78rem;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      display: none;
+    }
+    .msg.ok { display: block; background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .msg.err { display: block; background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .swagger-wrap {
+      background: {{ theme.swagger_bg|default:"#0b0f14" }};
+      min-height: 0;
+      overflow: auto;
+    }
+    #swagger-ui { min-height: calc(100vh - 72px); }
+    /* Swagger UI dark top bar contrast */
+    .swagger-wrap .swagger-ui .topbar { display: none; }
+    .swagger-wrap .swagger-ui .information-container { padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <header class="hms-header">
+      <div class="brand">
+        <div class="brand-mark">{{ brand_mark|default:"HMS" }}</div>
+        <div>
+          <h1>{{ hospital_name|default:"HMS" }} — API Console</h1>
+          <p>OpenAPI · Try requests · JWT for protected routes</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="{{ schema_path }}" target="_blank" rel="noopener">Raw schema</a>
+        <a href="/api/v1/" class="primary">API root</a>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <aside class="sidebar">
+        <h2>How to use</h2>
+        <ol>
+          <li><strong>Login</strong> — Use the form below or expand <code>POST /api/v1/auth/login/</code> in the explorer.</li>
+          <li><strong>Copy</strong> the <code>access</code> token from the response.</li>
+          <li>Click <strong>Authorize</strong> (lock) in the explorer → paste <code>&lt;access&gt;</code> or <code>Bearer &lt;access&gt;</code> depending on the dialog.</li>
+          <li>Call any endpoint — requests send <code>Authorization: Bearer …</code>.</li>
+        </ol>
+
+        <h2>Quick login</h2>
+        <div class="panel">
+          {% csrf_token %}
+          <label for="ql-email">Email</label>
+          <input id="ql-email" type="email" autocomplete="username" placeholder="admin@hospital.com" />
+          <label for="ql-password">Password</label>
+          <input id="ql-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+          <button type="button" id="ql-btn">Get token &amp; Authorize</button>
+          <div id="ql-msg" class="msg" role="status"></div>
+        </div>
+
+        <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">
+          Schema: <code style="color: var(--accent);">{{ schema_path }}</code>
+        </p>
+      </aside>
+
+      <div class="swagger-wrap" id="swagger-wrap">
+        <div id="swagger-ui"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js" crossorigin="anonymous"></script>
+  <script>
+    (function () {
+      const SCHEMA = "{{ schema_path|escapejs }}";
+      window.ui = SwaggerUIBundle({
+        url: SCHEMA,
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        layout: "StandaloneLayout",
+        persistAuthorization: true,
+        tryItOutEnabled: true,
+        supportedSubmitMethods: ["get", "put", "post", "delete", "options", "head", "patch", "trace"],
+        docExpansion: "list",
+        filter: true,
+        defaultModelsExpandDepth: 2,
+        defaultModelExpandDepth: 2,
+      });
+    })();
+
+    (function () {
+      const btn = document.getElementById("ql-btn");
+      const emailEl = document.getElementById("ql-email");
+      const passEl = document.getElementById("ql-password");
+      const msg = document.getElementById("ql-msg");
+
+      function getCsrf() {
+        const m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : "";
+      }
+
+      btn.addEventListener("click", async function () {
+        msg.className = "msg";
+        msg.textContent = "";
+        const email = emailEl.value.trim();
+        const password = passEl.value;
+        if (!email || !password) {
+          msg.className = "msg err";
+          msg.textContent = "Enter email and password.";
+          return;
+        }
+        btn.disabled = true;
+        try {
+          const r = await fetch("{{ login_path|escapejs }}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": getCsrf(),
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({ email: email, password: password }),
+          });
+          const j = await r.json();
+          if (!r.ok) {
+            const detail = j.errors?.detail || j.detail || JSON.stringify(j.errors || j);
+            throw new Error(typeof detail === "string" ? detail : "Login failed");
+          }
+          const data = j.data || j;
+          const access = data.access;
+          if (!access) throw new Error("No access token in response");
+          /* drf-spectacular names the SimpleJWT scheme "jwtAuth" (see rest_framework_simplejwt.py) */
+          if (window.ui && typeof window.ui.preauthorizeApiKey === "function") {
+            window.ui.preauthorizeApiKey("jwtAuth", access);
+          }
+          msg.className = "msg ok";
+          const hid = data.hospital_id ? " Hospital: " + data.hospital_id : "";
+          msg.textContent = "Authorized — JWT applied to all requests below." + hid;
+        } catch (e) {
+          msg.className = "msg err";
+          msg.textContent = e.message || String(e);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
