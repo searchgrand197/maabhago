@@ -52,6 +52,11 @@ import {
   Save as SaveMuiIcon,
   Waves as WavesIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
+  AirportShuttle as AirportShuttleIcon,
+  History as HistoryMuiIcon,
+  Phone as PhoneMuiIcon,
+  Storefront as StorefrontMuiIcon,
+  WhatsApp as WhatsAppIcon,
 } from '@mui/icons-material'
 
 function asLucide(Icon) {
@@ -125,3 +130,8 @@ export const Save = asLucide(SaveMuiIcon)
 export const XCircle = asLucide(CancelIcon)
 export const Copy = asLucide(ContentCopyIcon)
 export const Star = asLucide(StarMuiIcon)
+export const Ambulance = asLucide(AirportShuttleIcon)
+export const History = asLucide(HistoryMuiIcon)
+export const Phone = asLucide(PhoneMuiIcon)
+export const Storefront = asLucide(StorefrontMuiIcon)
+export const MessageCircle = asLucide(WhatsAppIcon)

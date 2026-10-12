@@ -7,11 +7,14 @@ from django.utils.dateparse import parse_date
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.ambulance.models import AmbulanceCollection
 from apps.billing.collection_attribution import doctor_name_map
 from apps.billing.models import BillingInvoice, CollectionAttribution
 from apps.expenses.models import ExpenseTransaction
 from apps.opd.models import OPDVisit
 from apps.payments.models import PaymentTransaction
+from apps.rentals.services import active_rent_collections
+from apps.reports.ca_summary import build_ca_summary
 from apps.reports.doctor_revenue import build_doctor_revenue_report
 from apps.shared.response import success_response
 
@@ -46,6 +49,7 @@ class CollectionSummaryView(APIView):
             hospital_id=hospital_id,
             status=PaymentTransaction.Status.SUCCESS,
             is_deleted=False,
+            voided=False,
         )
         if date_from:
             pay_qs = pay_qs.filter(paid_at__date__gte=date_from)
@@ -131,7 +135,22 @@ class CollectionSummaryView(APIView):
         if date_to:
             expense_qs = expense_qs.filter(paid_at__date__lte=date_to)
         expenses_total = _decimal(expense_qs.aggregate(total=Sum("total_amount"))["total"])
-        net_total = grand_total - expenses_total
+
+        ambulance_qs = AmbulanceCollection.objects.filter(
+            hospital_id=hospital_id, is_deleted=False, voided=False, status=AmbulanceCollection.Status.SUCCESS
+        )
+        rent_qs = active_rent_collections(hospital_id)
+        if date_from:
+            ambulance_qs = ambulance_qs.filter(collected_at__date__gte=date_from)
+            rent_qs = rent_qs.filter(collected_at__date__gte=date_from)
+        if date_to:
+            ambulance_qs = ambulance_qs.filter(collected_at__date__lte=date_to)
+            rent_qs = rent_qs.filter(collected_at__date__lte=date_to)
+        ambulance_total = _decimal(ambulance_qs.aggregate(total=Sum("amount"))["total"])
+        rent_total = _decimal(rent_qs.aggregate(total=Sum("amount"))["total"])
+        other_income_total = Decimal("0.00") if doctor_filter else ambulance_total + rent_total
+
+        net_total = grand_total + other_income_total - expenses_total
 
         return success_response(
             data={
@@ -139,11 +158,29 @@ class CollectionSummaryView(APIView):
                 "doctors": doctors_out,
                 "grand_total": f"{grand_total:.2f}",
                 "expenses_total": f"{expenses_total:.2f}",
+                "ambulance_total": f"{ambulance_total:.2f}",
+                "rent_total": f"{rent_total:.2f}",
+                "other_income_total": f"{other_income_total:.2f}",
                 "net_total": f"{net_total:.2f}",
                 "date_from": date_from.isoformat() if date_from else None,
                 "date_to": date_to.isoformat() if date_to else None,
             }
         )
+
+
+class CaSummaryView(APIView):
+    """Head-wise collection (IOL, Caesarean, Delivery, Room, IPD, Ambulance, Rent, ...) for the CA."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        hospital_id = getattr(request.user, "hospital_id", None)
+        if not hospital_id:
+            return success_response(data=None)
+        date_from = parse_date(request.query_params.get("date_from") or "")
+        date_to = parse_date(request.query_params.get("date_to") or "")
+        collected_by = (request.query_params.get("collected_by") or "").strip() or None
+        return success_response(data=build_ca_summary(hospital_id, date_from, date_to, collected_by=collected_by))
 
 
 class DoctorRevenueView(APIView):

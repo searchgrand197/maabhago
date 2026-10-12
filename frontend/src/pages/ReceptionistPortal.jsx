@@ -51,6 +51,8 @@ import {
   DragIndicator as DragIndicatorIcon,
   Assessment as AssessmentIcon,
   FileDownload as FileDownloadIcon,
+  AirportShuttle as AirportShuttleIcon,
+  Storefront as StorefrontIcon,
 } from '@mui/icons-material'
 import { getRoomsConfig, saveRoomsConfig, getTvGroupsConfig, saveTvGroupsConfig } from '../utils/rooms'
 import BedSelector from '../components/BedSelector'
@@ -127,6 +129,8 @@ import NetSpeedBadge from '../components/NetSpeedBadge'
 import CollectionTransactionList from '../components/collection/CollectionTransactionList'
 import ReportsSection from '../components/receptionist/ReportsSection'
 import ExpenseSection from '../components/receptionist/ExpenseSection'
+import AmbulanceCollectionSection from '../components/receptionist/AmbulanceCollectionSection'
+import RentCollectionSection from '../components/receptionist/RentCollectionSection'
 import IpdProcessModal from '../components/ipd/IpdProcessModal'
 import ProcessCompletionRing from '../components/ipd/ProcessCompletionRing'
 import IpdProcessSettingsSection, { DiscardChangesConfirmModal } from '../components/receptionist/IpdProcessSettingsSection'
@@ -274,6 +278,8 @@ const MessageSquare = asMuiIcon(MessageIcon)
 const GripVertical = asMuiIcon(DragIndicatorIcon)
 const BarChart2 = asMuiIcon(AssessmentIcon)
 const Download = asMuiIcon(FileDownloadIcon)
+const Ambulance = asMuiIcon(AirportShuttleIcon)
+const Storefront = asMuiIcon(StorefrontIcon)
 
 const DEFAULT_PAYMENT_SLIP_PROFILE = {
   hospital_name: 'Vardraan Hospital',
@@ -855,6 +861,8 @@ const NAV_GROUPS = [
       { id: 'payment_slip', label: 'Payment Slip', icon: Receipt },
       { id: 'payment_slip_list', label: 'Payment Slips List', icon: FileText },
       { id: 'expense', label: 'Expense', icon: IndianRupee },
+      { id: 'ambulance_collection', label: 'Ambulance Collection', icon: Ambulance },
+      { id: 'rent_collection', label: 'Rent Collection', icon: Storefront },
     ],
   },
   {
@@ -17065,6 +17073,8 @@ export default function ReceptionistPortal() {
                 <ExpenseSection />
               </div>
             )}
+            {section === 'ambulance_collection' && <AmbulanceCollectionSection />}
+            {section === 'rent_collection' && <RentCollectionSection />}
             {receptionDailyReportEnabled && section === 'reports' && <ReportsSection />}
             {section === 'discharge' && <DischargeSection />}
             {section === 'attenance' && <StaffAttendanceSection />}

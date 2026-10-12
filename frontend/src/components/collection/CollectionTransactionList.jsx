@@ -16,6 +16,8 @@ function tokenLabel(entry) {
   if (entry.entry_type === 'payment') return 'P'
   if (entry.entry_type === 'expense') return 'EXP'
   if (entry.entry_type === 'handover') return 'HO'
+  if (entry.entry_type === 'ambulance') return 'AMB'
+  if (entry.entry_type === 'rent') return 'RENT'
   return `#${entry.token_number || entry.queue_number || '--'}`
 }
 

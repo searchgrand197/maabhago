@@ -52,6 +52,18 @@ PERMISSIONS = {
         "expenses.create_transaction": "create",
         "expenses.void_transaction": "delete",
     },
+    "ambulance": {
+        "ambulance.view_collection": "view",
+        "ambulance.create_collection": "create",
+        "ambulance.manage_vehicle": "update",
+        "ambulance.void_collection": "delete",
+    },
+    "rentals": {
+        "rentals.view_collection": "view",
+        "rentals.create_collection": "create",
+        "rentals.manage_shop": "update",
+        "rentals.void_collection": "delete",
+    },
     "staff": {
         "staff.view_department": "view",
         "staff.create_department": "create",

@@ -24,9 +24,11 @@ from apps.shared.cancel_service import (
     release_payment_slip_number,
     void_payment_slip_sequence,
 )
+from apps.ambulance.models import AmbulanceCollection
 from apps.opd.models import OPDVisit
 from apps.expenses.models import ExpenseTransaction
 from apps.payments.models import CashHandover, PaymentQuickCategory, PaymentQuickService, PaymentTransaction
+from apps.rentals.services import active_rent_collections
 from apps.settings_management.models import ReceptionPortalSettings
 from apps.payments.serializers import PaymentTransactionCreateSerializer, PaymentTransactionSerializer
 from apps.roles_permissions.effective_permissions import allowed_portals_for_user
@@ -402,6 +404,28 @@ def _collection_expense_queryset(hospital_id, *, user_id=None, since=None, date_
     return expense_qs
 
 
+def _collection_other_income_querysets(hospital_id, *, user_id=None, since=None, date_from=None, date_to=None):
+    """Ambulance and rent receipts held at the desk, scoped like the other collection querysets."""
+    querysets = (
+        AmbulanceCollection.objects.filter(
+            hospital_id=hospital_id, is_deleted=False, voided=False, status=AmbulanceCollection.Status.SUCCESS
+        ),
+        active_rent_collections(hospital_id),
+    )
+    scoped = []
+    for qs in querysets:
+        if user_id:
+            qs = qs.filter(collected_by_id=user_id)
+        if since:
+            qs = qs.filter(collected_at__gt=since)
+        if date_from:
+            qs = qs.filter(collected_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(collected_at__date__lte=date_to)
+        scoped.append(qs)
+    return tuple(scoped)
+
+
 def _build_collection_snapshot_for_scope(
     hospital_id,
     *,
@@ -454,6 +478,18 @@ def _build_collection_snapshot_for_scope(
         or _cash_zero()
     )
 
+    income_cash = _cash_zero()
+    income_upi = _cash_zero()
+    income_other = _cash_zero()
+    for income_qs in _collection_other_income_querysets(
+        hospital_id, user_id=user_id, since=since, date_from=date_from, date_to=date_to
+    ):
+        income_cash += income_qs.filter(payment_mode="cash").aggregate(t=Sum("amount"))["t"] or _cash_zero()
+        income_upi += income_qs.filter(payment_mode="upi").aggregate(t=Sum("amount"))["t"] or _cash_zero()
+        income_other += (
+            income_qs.exclude(payment_mode__in=["cash", "upi"]).aggregate(t=Sum("amount"))["t"] or _cash_zero()
+        )
+
     opening_cash = _cash_zero()
     if include_opening_cash and shift_reset_user:
         incoming_qs = CashHandover.objects.filter(
@@ -465,9 +501,9 @@ def _build_collection_snapshot_for_scope(
             incoming_qs = incoming_qs.filter(accepted_at__gt=since)
         opening_cash = incoming_qs.aggregate(t=Sum("declared_cash_amount"))["t"] or _cash_zero()
 
-    cash_total = _decimal_2(opening_cash + payment_cash + opd_cash - expense_cash)
-    upi_total = _decimal_2(payment_upi + opd_upi - expense_upi)
-    other_total = _decimal_2(payment_other + opd_other - expense_other)
+    cash_total = _decimal_2(opening_cash + payment_cash + opd_cash + income_cash - expense_cash)
+    upi_total = _decimal_2(payment_upi + opd_upi + income_upi - expense_upi)
+    other_total = _decimal_2(payment_other + opd_other + income_other - expense_other)
     grand_total = _decimal_2(cash_total + upi_total + other_total)
 
     payload = {
@@ -560,6 +596,41 @@ def _build_collection_entries_for_scope(
                 "created_by_name": expense.recorded_by.full_name if expense.recorded_by_id else "",
                 "entry_time": expense.paid_at.isoformat() if expense.paid_at else expense.created_at.isoformat(),
                 "entry_ref": expense.slip_number or "",
+            }
+        )
+
+    ambulance_qs, rent_qs = _collection_other_income_querysets(
+        hospital_id, user_id=user_id, since=since, date_from=date_from, date_to=date_to
+    )
+    for row in ambulance_qs.select_related("vehicle", "collected_by"):
+        rows.append(
+            {
+                "id": str(row.id),
+                "entry_type": "ambulance",
+                "token_number": None,
+                "queue_number": None,
+                "patient_name": f"Ambulance {row.vehicle.vehicle_number}"
+                + (f" · {row.driver_name}" if row.driver_name else ""),
+                "amount": _format_money(row.amount),
+                "payment_mode": row.payment_mode or "cash",
+                "created_by_name": row.collected_by.full_name if row.collected_by_id else "",
+                "entry_time": row.collected_at.isoformat(),
+                "entry_ref": row.receipt_no,
+            }
+        )
+    for row in rent_qs.select_related("shop", "collected_by"):
+        rows.append(
+            {
+                "id": str(row.id),
+                "entry_type": "rent",
+                "token_number": None,
+                "queue_number": None,
+                "patient_name": f"Rent · {row.shop.shop_name} ({row.rent_month.strftime('%b %Y')})",
+                "amount": _format_money(row.amount),
+                "payment_mode": row.payment_mode or "cash",
+                "created_by_name": row.collected_by.full_name if row.collected_by_id else "",
+                "entry_time": row.collected_at.isoformat(),
+                "entry_ref": row.receipt_no,
             }
         )
 

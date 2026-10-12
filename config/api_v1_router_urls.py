@@ -44,7 +44,9 @@ from apps.expenses.views import (
     expense_party_detail,
     expense_quick_services,
 )
+from apps.ambulance.views import AmbulanceCollectionViewSet, AmbulanceVehicleViewSet
 from apps.payments.views import PaymentTransactionViewSet, payment_quick_services
+from apps.rentals.views import RentCollectionViewSet, RentShopViewSet
 from apps.roles_permissions.designation_permission_views import DesignationPermissionProfileViewSet
 from apps.roles_permissions.user_permission_views import UserPermissionProfileViewSet
 from apps.shared.routers import PublicApiRootRouter
@@ -119,6 +121,10 @@ router.register(r"opd-visits", OPDVisitViewSet, basename="opd-visits")
 router.register(r"patients", PatientViewSet, basename="patients")
 router.register(r"payments", PaymentTransactionViewSet, basename="payments")
 router.register(r"expenses", ExpenseTransactionViewSet, basename="expenses")
+router.register(r"ambulance/vehicles", AmbulanceVehicleViewSet, basename="ambulance-vehicles")
+router.register(r"ambulance/collections", AmbulanceCollectionViewSet, basename="ambulance-collections")
+router.register(r"rent/shops", RentShopViewSet, basename="rent-shops")
+router.register(r"rent/collections", RentCollectionViewSet, basename="rent-collections")
 router.register(r"shifts", ShiftViewSet, basename="shifts")
 router.register(r"specialties", SpecialtyViewSet, basename="specialties")
 router.register(r"staff", StaffProfileViewSet, basename="staff")

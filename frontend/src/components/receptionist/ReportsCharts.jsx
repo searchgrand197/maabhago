@@ -115,7 +115,25 @@ export default function ReportsCharts({ dataTab, chartBundle, loading }) {
     return <p className="p-6 text-center text-gray-400 text-sm">Loading…</p>
   }
 
-  const { opd, slips, ipd, refunds, collection } = chartBundle
+  const { opd, slips, ipd, refunds, collection, ambulance, rent } = chartBundle
+
+  if (dataTab === 'ambulance' || dataTab === 'rent') {
+    const bundle = dataTab === 'ambulance' ? ambulance : rent
+    const color = dataTab === 'ambulance' ? '#e11d48' : '#7c3aed'
+    return (
+      <div className="p-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <ChartCard title={dataTab === 'ambulance' ? 'Daily ambulance collection' : 'Daily rent collection'} className="lg:col-span-2">
+          <DailyBarChart data={bundle.daily} color={color} />
+        </ChartCard>
+        <ChartCard title={dataTab === 'ambulance' ? 'By vehicle (amount)' : 'By shop (amount)'}>
+          <HorizontalBarChart data={bundle.byGroup} color={color} />
+        </ChartCard>
+        <ChartCard title="Payment mode">
+          <ModePieChart data={bundle.mode} />
+        </ChartCard>
+      </div>
+    )
+  }
 
   if (dataTab === 'collection') {
     return (

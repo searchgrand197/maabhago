@@ -17,6 +17,8 @@ import {
   aggregatePaymentSlipsByItem,
   buildQuickServiceCatalog,
 } from './reportSlipCategoryUtils'
+import { formatVehicleNo, monthLabel, shopLabel } from './collectionSectionUtils'
+import { CaSummaryPanel, caSummaryCsvRows, renderCaSummaryHtml } from './caSummaryReport'
 
 function extractApiRows(data) {
   if (Array.isArray(data?.results)) return data.results
@@ -236,7 +238,7 @@ export default function ReportsSection() {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const typeDropdownRef = React.useRef(null)
   const [collectedBy, setCollectedBy] = useState('')
-  const [dataTab, setDataTab] = useState('collection')
+  const [dataTab, setDataTab] = useState('ca')
   const [dataView, setDataView] = useState('table')
   const [loading, setLoading] = useState(false)
   const [lastFetched, setLastFetched] = useState(null)
@@ -247,6 +249,10 @@ export default function ReportsSection() {
   const [staff, setStaff] = useState([])
   const [collectionSummary, setCollectionSummary] = useState(null)
   const [expenses, setExpenses] = useState([])
+  const [ambulanceRows, setAmbulanceRows] = useState([])
+  const [rentRows, setRentRows] = useState([])
+  const [pendingRent, setPendingRent] = useState(null)
+  const [caSummary, setCaSummary] = useState(null)
   const [slipCategories, setSlipCategories] = useState([])
   const [quickServices, setQuickServices] = useState([])
   const [slipCategory, setSlipCategory] = useState('')
@@ -299,6 +305,9 @@ export default function ReportsSection() {
       const wantsIpd = isAll || effectiveTypes.includes('ipd_advance')
       const wantsRefunds = isAll || effectiveTypes.includes('refunds')
       const wantsExpenses = isAll || effectiveTypes.includes('expenses')
+      // Ambulance and rent income is never doctor-attributed, so a doctor filter hides it.
+      const wantsAmbulance = !doctorUser && (isAll || effectiveTypes.includes('ambulance'))
+      const wantsRent = !doctorUser && (isAll || effectiveTypes.includes('rent'))
 
       const opdParams = new URLSearchParams({
         limit: '2000',
@@ -331,11 +340,29 @@ export default function ReportsSection() {
         status: 'success',
       })
 
-      const [opdRes, payRes, summaryRes, expenseRes] = await Promise.all([
-        wantsOpd || isAll ? api.get(`/opd-visits/?${opdParams}`) : Promise.resolve({ data: { data: [] } }),
-        wantsSlips || wantsIpd || wantsRefunds || isAll ? api.get(`/payments/?${payParams}`) : Promise.resolve({ data: { data: [] } }),
+      const incomeParams = new URLSearchParams({
+        limit: '2000',
+        ordering: '-collected_at',
+        collected_at__date__gte: fromDate,
+        collected_at__date__lte: toDate,
+      })
+      if (collectedBy) incomeParams.set('collected_by', collectedBy)
+
+      const caParams = new URLSearchParams({ date_from: fromDate, date_to: toDate })
+      if (collectedBy) caParams.set('collected_by', collectedBy)
+
+      const empty = Promise.resolve({ data: { data: [] } })
+      const [opdRes, payRes, summaryRes, expenseRes, ambulanceRes, rentRes, pendingRentRes, caRes] = await Promise.all([
+        wantsOpd || isAll ? api.get(`/opd-visits/?${opdParams}`) : empty,
+        wantsSlips || wantsIpd || wantsRefunds || isAll ? api.get(`/payments/?${payParams}`) : empty,
         api.get(`/reports/collection-summary/?${summaryParams}`),
-        wantsExpenses || isAll ? api.get(`/expenses/?${expenseParams}`) : Promise.resolve({ data: { data: [] } }),
+        wantsExpenses || isAll ? api.get(`/expenses/?${expenseParams}`) : empty,
+        wantsAmbulance ? api.get(`/ambulance/collections/?${incomeParams}`) : empty,
+        wantsRent ? api.get(`/rent/collections/?${incomeParams}`) : empty,
+        wantsRent ? api.get(`/rent/shops/pending/?as_of=${toDate}`) : Promise.resolve({ data: { data: null } }),
+        doctorUser
+          ? Promise.resolve({ data: { data: null } })
+          : api.get(`/reports/ca-summary/?${caParams}`).catch(() => ({ data: { data: null } })),
       ])
       let opdRows = extractApiRows(opdRes.data).filter((v) => v.status !== 'cancelled')
       let payRows = extractApiRows(payRes.data)
@@ -373,6 +400,10 @@ export default function ReportsSection() {
           ? extractApiRows(expenseRes.data).filter(isActiveExpense)
           : [],
       )
+      setAmbulanceRows(extractApiRows(ambulanceRes.data))
+      setRentRows(extractApiRows(rentRes.data))
+      setPendingRent(pendingRentRes.data?.data ?? null)
+      setCaSummary(caRes.data?.data ?? null)
       setCollectionSummary(summaryRes.data?.data || summaryRes.data || null)
       setLastFetched(new Date())
     } catch {
@@ -410,14 +441,17 @@ export default function ReportsSection() {
   const visibleTabs = useMemo(() => {
     const isAll = effectiveTypes.includes('all')
     return [
+      { id: 'ca', label: 'CA summary', hidden: Boolean(doctorUser) },
       { id: 'collection', label: 'By doctor' },
       { id: 'opd', label: 'OPD', type: 'opd' },
       { id: 'slips', label: 'Slips', type: 'payment_slips' },
       { id: 'refunds', label: 'Refunds', type: 'refunds' },
       { id: 'expenses', label: 'Expenses', type: 'expenses' },
       { id: 'ipd', label: 'IPD adv.', type: 'ipd_advance' },
-    ].filter((t) => isAll || !t.type || effectiveTypes.includes(t.type))
-  }, [effectiveTypes])
+      { id: 'ambulance', label: 'Ambulance', type: 'ambulance', hidden: Boolean(doctorUser) },
+      { id: 'rent', label: 'Rent', type: 'rent', hidden: Boolean(doctorUser) },
+    ].filter((t) => !t.hidden && (isAll || !t.type || effectiveTypes.includes(t.type)))
+  }, [effectiveTypes, doctorUser])
 
   // Auto-switch dataTab when the active tab is filtered out
   useEffect(() => {
@@ -452,17 +486,49 @@ export default function ReportsSection() {
     const slipTotalExAdv = paymentSlipsOnly.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0)
     const refundCount = refundPayments.length
     const refundTotal = refundPayments.reduce((s, p) => s + refundPaymentAmount(p), 0)
+    const ambulanceCount = ambulanceRows.length
+    const ambulanceTotal = ambulanceRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+    const ambulanceTrips = ambulanceRows.reduce((s, r) => s + (Number(r.trip_count) || 0), 0)
+    const rentCount = rentRows.length
+    const rentTotal = rentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
     const modeTotals = { cash: 0, upi: 0, card: 0, other: 0 }
     for (const v of opdVisits) addPaymentModeAmount(modeTotals, v.payment_mode, v.amount)
     for (const p of payments) addPaymentModeAmount(modeTotals, p.payment_mode, p.amount)
+    for (const r of ambulanceRows) addPaymentModeAmount(modeTotals, r.payment_mode, r.amount)
+    for (const r of rentRows) addPaymentModeAmount(modeTotals, r.payment_mode, r.amount)
     const modeGrand = modeTotals.cash + modeTotals.upi + modeTotals.card + modeTotals.other
-    const grandCollection = opdRevenue + slipTotal
+    const grandCollection = opdRevenue + slipTotal + ambulanceTotal + rentTotal
     return {
       opdCount, opdRevenue, slipCount, slipTotal, slipCountExAdv, slipTotalExAdv,
       advanceCount, advanceTotal, refundCount, refundTotal,
+      ambulanceCount, ambulanceTotal, ambulanceTrips, rentCount, rentTotal,
       modeTotals, modeGrand, grandCollection,
     }
-  }, [opdVisits, payments, paymentSlipsOnly, refundPayments])
+  }, [opdVisits, payments, paymentSlipsOnly, refundPayments, ambulanceRows, rentRows])
+
+  const ambulanceByVehicle = useMemo(() => {
+    const map = new Map()
+    for (const r of ambulanceRows) {
+      const key = r.vehicle_number || '—'
+      const row = map.get(key) || { vehicle_number: key, drivers: new Set(), entries: 0, trips: 0, cash: 0, other: 0, total: 0 }
+      const amt = parseFloat(r.amount) || 0
+      if (r.driver_name) row.drivers.add(r.driver_name)
+      row.entries += 1
+      row.trips += Number(r.trip_count) || 0
+      row.total += amt
+      if (String(r.payment_mode).toLowerCase() === 'cash') row.cash += amt
+      else row.other += amt
+      map.set(key, row)
+    }
+    return [...map.values()]
+      .map((r) => ({ ...r, drivers: [...r.drivers].join(', ') }))
+      .sort((a, b) => b.total - a.total)
+  }, [ambulanceRows])
+
+  const pendingRentRows = useMemo(
+    () => (pendingRent?.shops || []).filter((r) => Number(r.pending) > 0).sort((a, b) => Number(b.pending) - Number(a.pending)),
+    [pendingRent],
+  )
 
   const chartBundle = useMemo(() => {
     const overviewCategory = [
@@ -470,6 +536,8 @@ export default function ReportsSection() {
       { name: 'Slips', amount: summary.slipTotalExAdv },
       { name: 'IPD adv.', amount: summary.advanceTotal },
       { name: 'Refunds', amount: Math.abs(summary.refundTotal) },
+      { name: 'Ambulance', amount: summary.ambulanceTotal },
+      { name: 'Rent', amount: summary.rentTotal },
     ].filter((d) => d.amount > 0)
     return {
       overview: {
@@ -521,8 +589,18 @@ export default function ReportsSection() {
         daily: buildDailyAmountSeries(refundPayments, (p) => p.paid_at, (p) => Math.abs(refundPaymentAmount(p))),
         mode: buildModeChartData(modeTotalsFromItems(refundPayments, (p) => p.payment_mode, (p) => Math.abs(refundPaymentAmount(p)))),
       },
+      ambulance: {
+        daily: buildDailyAmountSeries(ambulanceRows, (r) => r.collected_at, (r) => r.amount),
+        byGroup: buildAmountByField(ambulanceRows, (r) => formatVehicleNo(r.vehicle_number), (r) => r.amount),
+        mode: buildModeChartData(modeTotalsFromItems(ambulanceRows, (r) => r.payment_mode, (r) => r.amount)),
+      },
+      rent: {
+        daily: buildDailyAmountSeries(rentRows, (r) => r.collected_at, (r) => r.amount),
+        byGroup: buildAmountByField(rentRows, (r) => shopLabel(r), (r) => r.amount),
+        mode: buildModeChartData(modeTotalsFromItems(rentRows, (r) => r.payment_mode, (r) => r.amount)),
+      },
     }
-  }, [summary, opdVisits, paymentSlipsOnly, ipdAdvancePayments, refundPayments, collectionSummary, doctorUser])
+  }, [summary, opdVisits, paymentSlipsOnly, ipdAdvancePayments, refundPayments, collectionSummary, doctorUser, ambulanceRows, rentRows])
 
   function setQuickRange(kind) {
     const now = new Date()
@@ -545,7 +623,14 @@ export default function ReportsSection() {
   function exportCsv() {
     let rows
     let header
-    if (dataTab === 'collection') {
+    if (dataTab === 'ca') {
+      if (!caSummary) {
+        toast.error('CA summary not loaded')
+        return
+      }
+      header = ['S.No', 'Head', 'Count', 'Amount received', 'Memo (not added to total)']
+      rows = caSummaryCsvRows(caSummary)
+    } else if (dataTab === 'collection') {
       header = ['Doctor / Self', 'OPD fees', 'Payment slips', 'Total']
       rows = []
       if (collectionSummary && !doctorUser) {
@@ -594,6 +679,39 @@ export default function ReportsSection() {
         e.total_amount ?? '',
         e.recorded_by_name || '',
       ])
+    } else if (dataTab === 'ambulance') {
+      header = ['S.No', 'Date', 'Receipt', 'Vehicle', 'Driver', 'Trips', 'Patient', 'Mode', 'Amount', 'Received by']
+      rows = ambulanceRows.map((r, i) => [
+        i + 1,
+        r.collected_at ? formatDateTime(r.collected_at) : '',
+        r.receipt_no || '',
+        formatVehicleNo(r.vehicle_number),
+        r.driver_name || '',
+        r.trip_count ?? '',
+        r.patient_name || '',
+        r.payment_mode || '',
+        r.amount ?? '',
+        r.collected_by_name || '',
+      ])
+    } else if (dataTab === 'rent') {
+      header = ['S.No', 'Date', 'Receipt', 'Shop', 'Owner', 'Rent month', 'Mode', 'Amount', 'Received by']
+      rows = rentRows.map((r, i) => [
+        i + 1,
+        r.collected_at ? formatDateTime(r.collected_at) : '',
+        r.receipt_no || '',
+        shopLabel(r),
+        r.owner_name || '',
+        monthLabel(r.rent_month),
+        r.payment_mode || '',
+        r.amount ?? '',
+        r.collected_by_name || '',
+      ])
+      if (pendingRentRows.length) {
+        rows.push([], ['Pending rent', `as of ${toDate}`], ['Shop', 'Owner', 'Phone', 'Rent / month', 'Unpaid months', 'Pending'])
+        for (const p of pendingRentRows) {
+          rows.push([shopLabel(p), p.owner_name, p.owner_phone, p.monthly_rent, (p.unpaid_months || []).map(monthLabel).join(' / '), p.pending])
+        }
+      }
     } else if (dataTab === 'refunds') {
       header = ['S.No', 'Date', 'Slip No', 'Patient', 'Invoice', 'Mode', 'Refunded']
       rows = refundPayments.map((p, i) => [
@@ -641,7 +759,7 @@ export default function ReportsSection() {
     const printedAt = formatWithPattern(new Date(), 'd MMMM yyyy · HH:mm')
     const periodLabel = `${format(new Date(`${fromDate}T12:00:00`), 'd MMM yyyy')} – ${format(new Date(`${toDate}T12:00:00`), 'd MMM yyyy')}`
 
-    const typeLabels = { all: 'All collections', opd: 'OPD slips', ipd_advance: 'IPD advances', payment_slips: 'Payment slips', refunds: 'Refunds', expenses: 'Expenses' }
+    const typeLabels = { all: 'All collections', opd: 'OPD slips', ipd_advance: 'IPD advances', payment_slips: 'Payment slips', refunds: 'Refunds', expenses: 'Expenses', ambulance: 'Ambulance collection', rent: 'Rent collection' }
     const scopeLabel = effectiveTypes.includes('all')
       ? 'All collections'
       : effectiveTypes.map((t) => typeLabels[t] || t).join(' + ')
@@ -727,7 +845,62 @@ export default function ReportsSection() {
     const printWantsRefunds = isAllPrint || effectiveTypes.includes('refunds')
     const printWantsIpd = isAllPrint || effectiveTypes.includes('ipd_advance')
     const printWantsExpenses = isAllPrint || effectiveTypes.includes('expenses')
+    const printWantsAmbulance = !doctorUser && (isAllPrint || effectiveTypes.includes('ambulance'))
+    const printWantsRent = !doctorUser && (isAllPrint || effectiveTypes.includes('rent'))
     const printWantsCollections = printWantsOpd || printWantsSlips || printWantsRefunds || printWantsIpd
+      || printWantsAmbulance || printWantsRent
+
+    const ambulanceVehicleHtml = ambulanceByVehicle.length
+      ? ambulanceByVehicle.map((v) => `
+        <tr>
+          <td>${escapeHtml(formatVehicleNo(v.vehicle_number))}</td>
+          <td>${escapeHtml(v.drivers || '—')}</td>
+          <td class="c">${v.entries}</td>
+          <td class="c">${v.trips}</td>
+          <td class="r">₹${fmtMoney(v.cash)}</td>
+          <td class="r">₹${fmtMoney(v.other)}</td>
+          <td class="r">₹${fmtMoney(v.total)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" class="empty">No ambulance collection in this period</td></tr>'
+
+    const ambulanceRowsHtml = ambulanceRows.map((r, i) => `
+        <tr>
+          <td class="c">${i + 1}</td>
+          <td>${escapeHtml(r.collected_at ? formatDateTime(r.collected_at) : '—')}</td>
+          <td>${escapeHtml(r.receipt_no || '—')}</td>
+          <td>${escapeHtml(formatVehicleNo(r.vehicle_number))}</td>
+          <td>${escapeHtml(r.driver_name || '—')}</td>
+          <td class="c">${r.trip_count ?? ''}</td>
+          <td class="c">${escapeHtml((r.payment_mode || '—').toUpperCase())}</td>
+          <td class="r">₹${fmtMoney(r.amount)}</td>
+        </tr>`).join('')
+
+    const rentRowsHtml = rentRows.length
+      ? rentRows.map((r, i) => `
+        <tr>
+          <td class="c">${i + 1}</td>
+          <td>${escapeHtml(r.collected_at ? formatDateTime(r.collected_at) : '—')}</td>
+          <td>${escapeHtml(r.receipt_no || '—')}</td>
+          <td>${escapeHtml(shopLabel(r))}</td>
+          <td>${escapeHtml(r.owner_name || '—')}</td>
+          <td>${escapeHtml(monthLabel(r.rent_month))}</td>
+          <td class="c">${escapeHtml((r.payment_mode || '—').toUpperCase())}</td>
+          <td class="r">₹${fmtMoney(r.amount)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="8" class="empty">No rent collected in this period</td></tr>'
+
+    const pendingRentTotal = pendingRentRows.reduce((s, r) => s + (Number(r.pending) || 0), 0)
+    const pendingRentHtml = pendingRentRows.length
+      ? pendingRentRows.map((r) => `
+        <tr>
+          <td>${escapeHtml(shopLabel(r))}</td>
+          <td>${escapeHtml(r.owner_name || '—')}${r.owner_phone ? `<br/><span style="color:#555">${escapeHtml(r.owner_phone)}</span>` : ''}</td>
+          <td class="r">₹${fmtMoney(r.monthly_rent)}</td>
+          <td>${escapeHtml((r.unpaid_months || []).map(monthLabel).join(', '))}</td>
+          <td class="c">${r.overdue_months || 0}</td>
+          <td class="r">₹${fmtMoney(r.pending)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="6" class="empty">No pending rent. All shops are clear.</td></tr>'
 
     const expenseRowsHtml = expenses.length
       ? expenses.map((e, i) => `
@@ -744,6 +917,13 @@ export default function ReportsSection() {
       : '<tr><td colspan="8" class="empty">No expenses in this period</td></tr>'
     const collectionExpenses = expenses.filter((e) => !e.source || e.source === 'collection')
     const expensesTotal = collectionExpenses.reduce((s, e) => s + (parseFloat(e.total_amount) || 0), 0)
+    // Detail lists are capped by pagination, so whole-period totals come from the server when available.
+    const useCaTotals = Boolean(caSummary) && !doctorUser && isAllPrint
+    const printGross = useCaTotals ? Number(caSummary.gross_received) : summary.grandCollection
+    const printNet = useCaTotals
+      ? Number(caSummary.net_after_expenses)
+      : (collectionSummary?.net_total != null ? Number(collectionSummary.net_total) : (summary.grandCollection - expensesTotal))
+    const printModes = useCaTotals ? caSummary.modes : summary.modeTotals
 
     const tablesBodyHtml = [
       printWantsOpd ? `
@@ -811,6 +991,53 @@ export default function ReportsSection() {
         <tbody>${expenseRowsHtml}</tbody>
         <tfoot><tr><td colspan="6" class="r">Total (Collection source only)</td><td class="r">₹${fmtMoney(expensesTotal)}</td><td></td></tr></tfoot>
       </table>` : '',
+
+      printWantsAmbulance ? `
+      <h2 class="sec">Ambulance Collection — Vehicle-wise (${ambulanceByVehicle.length} vehicle(s), ${summary.ambulanceTrips} trip(s))</h2>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Vehicle no</th><th>Driver(s)</th><th class="c">Receipts</th><th class="c">Trips</th>
+            <th class="r">Cash</th><th class="r">UPI / Other</th><th class="r">Total</th>
+          </tr>
+        </thead>
+        <tbody>${ambulanceVehicleHtml}</tbody>
+        <tfoot><tr><td colspan="6" class="r">Total</td><td class="r">₹${fmtMoney(summary.ambulanceTotal)}</td></tr></tfoot>
+      </table>
+      ${ambulanceRows.length ? `
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th class="c">#</th><th>Date &amp; time</th><th>Receipt</th><th>Vehicle</th><th>Driver</th>
+            <th class="c">Trips</th><th class="c">Mode</th><th class="r">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${ambulanceRowsHtml}</tbody>
+      </table>` : ''}` : '',
+
+      printWantsRent ? `
+      <h2 class="sec">Rent Collection (${rentRows.length})</h2>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th class="c">#</th><th>Date &amp; time</th><th>Receipt</th><th>Shop</th><th>Owner</th>
+            <th>Rent for</th><th class="c">Mode</th><th class="r">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${rentRowsHtml}</tbody>
+        <tfoot><tr><td colspan="7" class="r">Total</td><td class="r">₹${fmtMoney(summary.rentTotal)}</td></tr></tfoot>
+      </table>
+      <h2 class="sec">Pending Rent as of ${escapeHtml(format(new Date(`${toDate}T12:00:00`), 'd MMM yyyy'))} (${pendingRentRows.length} shop(s))</h2>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Shop</th><th>Owner</th><th class="r">Rent / month</th><th>Unpaid months</th>
+            <th class="c">Overdue</th><th class="r">Pending</th>
+          </tr>
+        </thead>
+        <tbody>${pendingRentHtml}</tbody>
+        <tfoot><tr><td colspan="5" class="r">Total pending rent</td><td class="r">₹${fmtMoney(pendingRentTotal)}</td></tr></tfoot>
+      </table>` : '',
     ].join('')
 
 
@@ -869,10 +1096,13 @@ export default function ReportsSection() {
         <tr><td class="lbl">Slip detail view</td><td>${escapeHtml(slipDetailViewLabel)}</td><td class="lbl">Slip category</td><td>${escapeHtml(categoryLabelText)}</td></tr>
         ${(printWantsOpd || printWantsSlips) ? `<tr>${printWantsOpd ? `<td class="lbl">OPD visits</td><td>${summary.opdCount} (₹${fmtMoney(summary.opdRevenue)})</td>` : `<td class="lbl"></td><td></td>`}${printWantsSlips ? `<td class="lbl">Payment slips</td><td>${summary.slipCountExAdv} (₹${fmtMoney(summary.slipTotalExAdv)})</td>` : `<td class="lbl"></td><td></td>`}</tr>` : ''}
         ${(printWantsIpd || printWantsRefunds) ? `<tr>${printWantsIpd ? `<td class="lbl">IPD advances</td><td>${summary.advanceCount} (₹${fmtMoney(summary.advanceTotal)})</td>` : `<td class="lbl"></td><td></td>`}${printWantsRefunds ? `<td class="lbl">Refunds</td><td>${summary.refundCount} (₹${fmtMoney(summary.refundTotal)})</td>` : `<td class="lbl"></td><td></td>`}</tr>` : ''}
-        ${printWantsCollections ? `<tr><td class="lbl">Gross collection</td><td colspan="3">₹${fmtMoney(summary.grandCollection)}</td></tr>` : ''}
-        ${printWantsExpenses ? `<tr><td class="lbl">Expenses</td><td>${expenses.length} voucher(s) · ₹${fmtMoney(expensesTotal)}</td>${printWantsCollections ? `<td class="lbl" style="background:#fee2e2">Net collection</td><td style="font-weight:bold">${(() => { const net = collectionSummary?.net_total != null ? Number(collectionSummary.net_total) : (summary.grandCollection - expensesTotal); return (net < 0 ? '<span style="color:red">−₹' + fmtMoney(Math.abs(net)) + '</span>' : '₹' + fmtMoney(net)); })()}</td>` : `<td class="lbl">Total expenses</td><td style="font-weight:bold">₹${fmtMoney(expensesTotal)}</td>`}</tr>` : ''}
-        ${printWantsCollections ? `<tr><td class="lbl" colspan="2">By mode (OPD + IPD advances + payment slips)</td><td colspan="2">Cash ₹${fmtMoney(summary.modeTotals.cash)} · UPI ₹${fmtMoney(summary.modeTotals.upi)} · Card ₹${fmtMoney(summary.modeTotals.card)} · Other ₹${fmtMoney(summary.modeTotals.other)}</td></tr>` : ''}
+        ${(printWantsAmbulance || printWantsRent) ? `<tr>${printWantsAmbulance ? `<td class="lbl">Ambulance</td><td>${summary.ambulanceCount} receipt(s) · ${summary.ambulanceTrips} trip(s) (₹${fmtMoney(summary.ambulanceTotal)})</td>` : `<td class="lbl"></td><td></td>`}${printWantsRent ? `<td class="lbl">Rent</td><td>${summary.rentCount} (₹${fmtMoney(summary.rentTotal)}) · Pending ₹${fmtMoney(pendingRentTotal)}</td>` : `<td class="lbl"></td><td></td>`}</tr>` : ''}
+        ${printWantsCollections ? `<tr><td class="lbl">Gross collection</td><td colspan="3">₹${fmtMoney(printGross)}</td></tr>` : ''}
+        ${printWantsExpenses ? `<tr><td class="lbl">Expenses</td><td>${expenses.length} voucher(s) · ₹${fmtMoney(expensesTotal)}</td>${printWantsCollections ? `<td class="lbl" style="background:#fee2e2">Net collection</td><td style="font-weight:bold">${(() => { const net = printNet; return (net < 0 ? '<span style="color:red">−₹' + fmtMoney(Math.abs(net)) + '</span>' : '₹' + fmtMoney(net)); })()}</td>` : `<td class="lbl">Total expenses</td><td style="font-weight:bold">₹${fmtMoney(expensesTotal)}</td>`}</tr>` : ''}
+        ${printWantsCollections ? `<tr><td class="lbl" colspan="2">By mode (all collections)</td><td colspan="2">Cash ₹${fmtMoney(printModes.cash)} · UPI ₹${fmtMoney(printModes.upi)} · Card ₹${fmtMoney(printModes.card)} · Other ₹${fmtMoney(printModes.other)}</td></tr>` : ''}
       </table>
+
+      ${doctorUser ? '' : renderCaSummaryHtml(caSummary)}
 
       ${tablesBodyHtml}
 
@@ -1184,6 +1414,8 @@ export default function ReportsSection() {
                     ipd_advance: 'IPD adv.',
                     refunds: 'Refunds',
                     expenses: 'Expenses',
+                    ambulance: 'Ambulance',
+                    rent: 'Rent',
                   }[t] || t)).join(', ')}
             </span>
             <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -1200,6 +1432,10 @@ export default function ReportsSection() {
                 { id: 'ipd_advance', label: 'IPD advance' },
                 { id: 'refunds', label: 'Refunds' },
                 { id: 'expenses', label: 'Expenses' },
+                ...(doctorUser ? [] : [
+                  { id: 'ambulance', label: 'Ambulance collection' },
+                  { id: 'rent', label: 'Rent collection' },
+                ]),
               ].map((opt) => {
                 const isAll = opt.id === 'all'
                 const checked = isAll
@@ -1225,6 +1461,8 @@ export default function ReportsSection() {
                               : [...withoutAll, opt.id]
                             if (!next.length) return ['all']
                             if (next.includes('refunds') && !prev.includes('refunds')) setDataTab('refunds')
+                            if (next.includes('ambulance') && !prev.includes('ambulance')) setDataTab('ambulance')
+                            if (next.includes('rent') && !prev.includes('rent')) setDataTab('rent')
                             return next
                           })
                         }
@@ -1255,12 +1493,16 @@ export default function ReportsSection() {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-1.5 ${doctorUser ? 'lg:grid-cols-6' : 'lg:grid-cols-8'}`}>
         {[
           { label: 'OPD', value: summary.opdCount, sub: `₹${fmtMoney(summary.opdRevenue)}`, color: 'border-blue-200/80 bg-blue-50/60' },
           { label: 'Slips', value: summary.slipCountExAdv, sub: `₹${fmtMoney(summary.slipTotalExAdv)}`, color: 'border-emerald-200/80 bg-emerald-50/60' },
           { label: 'IPD adv.', value: summary.advanceCount, sub: `₹${fmtMoney(summary.advanceTotal)}`, color: 'border-amber-200/80 bg-amber-50/60' },
           { label: 'Refunds', value: summary.refundCount, sub: `₹${fmtMoney(summary.refundTotal)}`, color: 'border-sky-200/80 bg-sky-50/60' },
+          ...(doctorUser ? [] : [
+            { label: 'Ambulance', value: summary.ambulanceCount, sub: `₹${fmtMoney(summary.ambulanceTotal)} · ${summary.ambulanceTrips} trips`, color: 'border-pink-200/80 bg-pink-50/60' },
+            { label: 'Rent', value: summary.rentCount, sub: `₹${fmtMoney(summary.rentTotal)}${pendingRentRows.length ? ` · ₹${fmtMoney(pendingRentRows.reduce((s, r) => s + (Number(r.pending) || 0), 0))} due` : ''}`, color: 'border-violet-200/80 bg-violet-50/60' },
+          ]),
           (() => { const cExp = expenses.filter((e) => !e.source || e.source === 'collection'); const cTotal = collectionSummary?.expenses_total != null ? Number(collectionSummary.expenses_total) : cExp.reduce((s, e) => s + (parseFloat(e.total_amount) || 0), 0); const othTotal = expenses.filter((e) => e.source === 'other_funds').reduce((s, e) => s + (parseFloat(e.total_amount) || 0), 0); return { label: 'Expenses', value: expenses.length, sub: `₹${fmtMoney(cTotal)} from collection${othTotal > 0 ? ` · ₹${fmtMoney(othTotal)} other` : ''}`, color: 'border-rose-200/80 bg-rose-50/60' } })(),
           (() => { const net = collectionSummary?.net_total != null ? Number(collectionSummary.net_total) : summary.grandCollection; return { label: 'Net', value: (net < 0 ? '−₹' : '₹') + fmtMoney(Math.abs(net)), sub: 'After expenses', color: net < 0 ? 'border-rose-300/80 bg-rose-100/60' : 'border-indigo-200/80 bg-indigo-50/60' } })()
         ].map((c) => (
@@ -1289,12 +1531,16 @@ export default function ReportsSection() {
         <div className="flex flex-wrap items-stretch border-b border-gray-100 shrink-0">
           <div className="flex flex-1 min-w-0">
           {visibleTabs.map((t) => {
-              const count = t.id === 'collection'
+              const count = t.id === 'ca'
+                ? null
+                : t.id === 'collection'
                 ? (collectionSummary?.doctors?.length || 0) + 1
                 : t.id === 'opd' ? opdVisits.length
                 : t.id === 'slips' ? paymentSlipsOnly.length
                 : t.id === 'refunds' ? refundPayments.length
                 : t.id === 'expenses' ? expenses.length
+                : t.id === 'ambulance' ? ambulanceRows.length
+                : t.id === 'rent' ? rentRows.length
                 : ipdAdvancePayments.length
               return (
                 <button
@@ -1303,7 +1549,7 @@ export default function ReportsSection() {
                   onClick={() => setDataTab(t.id)}
                   className={`flex-1 py-2 text-xs font-semibold min-w-[72px] ${dataTab === t.id ? 'text-indigo-700 border-b-2 border-indigo-600 bg-indigo-50/40' : 'text-gray-500 hover:text-gray-700'}`}
                 >
-                  {t.label} ({count})
+                  {t.label}{count == null ? '' : ` (${count})`}
                 </button>
               )
             })}
@@ -1328,10 +1574,12 @@ export default function ReportsSection() {
           </div>
         </div>
         <div className="overflow-x-auto flex-1 min-h-0 max-h-[min(70vh,720px)] overflow-y-auto">
-          {dataView === 'chart' ? (
+          {dataView === 'chart' && dataTab !== 'ca' ? (
             <ReportsCharts dataTab={dataTab} chartBundle={chartBundle} loading={loading} />
           ) : loading ? (
             <p className="p-6 text-center text-gray-400 text-sm">Loading…</p>
+          ) : dataTab === 'ca' ? (
+            <CaSummaryPanel ca={caSummary} />
           ) : dataTab === 'collection' ? (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 text-[10px] uppercase text-gray-500">
@@ -1544,6 +1792,114 @@ export default function ReportsSection() {
                 ))}
               </tbody>
             </table>
+          ) : dataTab === 'ambulance' ? (
+            <div>
+              {ambulanceByVehicle.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 border-b border-gray-100 bg-pink-50/30">
+                  {ambulanceByVehicle.map((v) => (
+                    <div key={v.vehicle_number} className="rounded-md border border-pink-200 bg-white px-2 py-1 text-[11px]">
+                      <span className="font-mono font-bold text-gray-800">{formatVehicleNo(v.vehicle_number)}</span>
+                      <span className="text-gray-500"> · {v.trips} trips · </span>
+                      <span className="font-bold text-pink-700 tabular-nums">₹{fmtMoney(v.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0 text-[10px] uppercase text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">#</th>
+                    <th className="px-3 py-2 text-left">Date</th>
+                    <th className="px-3 py-2 text-left">Receipt</th>
+                    <th className="px-3 py-2 text-left">Vehicle</th>
+                    <th className="px-3 py-2 text-left">Driver</th>
+                    <th className="px-3 py-2 text-center">Trips</th>
+                    <th className="px-3 py-2 text-left">Mode</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                    <th className="px-3 py-2 text-left">Received by</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {ambulanceRows.length === 0 ? (
+                    <tr><td colSpan={9} className="px-3 py-6 text-center text-gray-400">No ambulance collection in this range</td></tr>
+                  ) : ambulanceRows.map((r, i) => (
+                    <tr key={r.id} className="hover:bg-pink-50/40">
+                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">{r.collected_at ? formatDateTime(r.collected_at) : '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs font-semibold">{r.receipt_no || '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs font-bold">{formatVehicleNo(r.vehicle_number)}</td>
+                      <td className="px-3 py-2">{r.driver_name || '—'}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">{r.trip_count ?? '—'}</td>
+                      <td className="px-3 py-2 uppercase text-xs">{r.payment_mode || '—'}</td>
+                      <td className="px-3 py-2 text-right font-bold text-pink-700 tabular-nums">₹{fmtMoney(r.amount)}</td>
+                      <td className="px-3 py-2 text-xs">{r.collected_by_name || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : dataTab === 'rent' ? (
+            <div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0 text-[10px] uppercase text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">#</th>
+                    <th className="px-3 py-2 text-left">Date</th>
+                    <th className="px-3 py-2 text-left">Receipt</th>
+                    <th className="px-3 py-2 text-left">Shop</th>
+                    <th className="px-3 py-2 text-left">Owner</th>
+                    <th className="px-3 py-2 text-left">Rent for</th>
+                    <th className="px-3 py-2 text-left">Mode</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {rentRows.length === 0 ? (
+                    <tr><td colSpan={8} className="px-3 py-6 text-center text-gray-400">No rent collected in this range</td></tr>
+                  ) : rentRows.map((r, i) => (
+                    <tr key={r.id} className="hover:bg-violet-50/40">
+                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">{r.collected_at ? formatDateTime(r.collected_at) : '—'}</td>
+                      <td className="px-3 py-2 font-mono text-xs font-semibold">{r.receipt_no || '—'}</td>
+                      <td className="px-3 py-2 font-medium">{shopLabel(r)}</td>
+                      <td className="px-3 py-2">{r.owner_name || '—'}</td>
+                      <td className="px-3 py-2 text-xs">{monthLabel(r.rent_month)}</td>
+                      <td className="px-3 py-2 uppercase text-xs">{r.payment_mode || '—'}</td>
+                      <td className="px-3 py-2 text-right font-bold text-violet-700 tabular-nums">₹{fmtMoney(r.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-3 py-2 border-t border-gray-100 bg-rose-50/40 text-[11px] font-bold uppercase text-rose-700">
+                Pending rent as of {toDate} · {pendingRentRows.length} shop(s) · ₹{fmtMoney(pendingRentRows.reduce((s, r) => s + (Number(r.pending) || 0), 0))}
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-[10px] uppercase text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Shop</th>
+                    <th className="px-3 py-2 text-left">Owner</th>
+                    <th className="px-3 py-2 text-right">Rent / month</th>
+                    <th className="px-3 py-2 text-left">Unpaid months</th>
+                    <th className="px-3 py-2 text-center">Overdue</th>
+                    <th className="px-3 py-2 text-right">Pending</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {pendingRentRows.length === 0 ? (
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-emerald-600">No pending rent. All shops are clear.</td></tr>
+                  ) : pendingRentRows.map((r) => (
+                    <tr key={r.id} className="hover:bg-rose-50/40">
+                      <td className="px-3 py-2 font-medium">{shopLabel(r)}</td>
+                      <td className="px-3 py-2">{r.owner_name || '—'}<span className="block text-[10px] text-gray-500">{r.owner_phone || ''}</span></td>
+                      <td className="px-3 py-2 text-right tabular-nums">₹{fmtMoney(r.monthly_rent)}</td>
+                      <td className="px-3 py-2 text-xs">{(r.unpaid_months || []).map(monthLabel).join(', ') || '—'}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">{r.overdue_months || 0}</td>
+                      <td className="px-3 py-2 text-right font-bold text-rose-700 tabular-nums">₹{fmtMoney(r.pending)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       </div>
